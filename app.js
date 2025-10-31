@@ -81,15 +81,30 @@ app.post("/tasks", (request, response) => {
 
 // GET Task API
 app.get("/get_tasks", (request, response) => {
+  const { status, priority } = request.query;
   const get_tasks_query = `
         SELECT 
             *
         FROM
              tasks_table 
+        WHERE
+            1=1
         ORDER BY due_date ASC;
     `;
 
-  db.query(get_tasks_query, (err, result) => {
+  if (priority) {
+    get_tasks_query += `AND priority = ?`;
+  }
+
+  if (status) {
+    get_tasks_query += `AND status = ?`;
+  }
+
+  const values = [];
+  if (status) values.push(status);
+  if (priority) values.push(priority);
+
+  db.query(get_tasks_query, values, (err, result) => {
     if (err) {
       response.status(500).json("Cannot Get Task");
       return;
@@ -102,9 +117,9 @@ app.get("/get_tasks", (request, response) => {
 app.patch("/edit_tasks", (request, response) => {
   const taskId = request.query.task_id;
   const editTaskDetails = request.body;
-  const { editPriority, editStatus} = editTaskDetails;
+  const { editPriority, editStatus } = editTaskDetails;
 
-    const edit_task_query = `
+  const edit_task_query = `
     UPDATE tasks_table 
     SET
         priority = ?,
@@ -112,13 +127,17 @@ app.patch("/edit_tasks", (request, response) => {
         updated_at = CURRENT_TIMESTAMP
     WHERE 
         task_id = ?;`;
-    db.query(edit_task_query,[editPriority, editStatus, taskId], (err, resut) => {
+  db.query(
+    edit_task_query,
+    [editPriority, editStatus, taskId],
+    (err, resut) => {
       if (err) {
         response.status(500).json("Cannot Update Task");
         return;
       }
       response.status(200).json("Task Updated SuccessFully");
-    });
+    }
+  );
 });
 
 // Delete Task API
@@ -138,4 +157,61 @@ app.delete("/tasks", (request, response) => {
     }
     response.status(200).json("Task Deleted Successfully");
   });
+});
+
+// Get Insights API
+app.get("/get_insights", (request, response) => {
+  const total_open_query = `
+        SELECT 
+            COUNT(*) AS totalOpen
+        FROM 
+            tasks_table
+        WHERE status = "open" ;`;
+
+    
+        const priority_query = `
+             SELECT priority, COUNT(*) as priorityDistribution
+            FROM  tasks_table
+            GROUP BY priority
+            ORDER BY priorityDistribution ASC;
+        `;
+
+        const due_soon_query = `
+            SELECT COUNT(*) AS dueSoonCount 
+            FROM tasks_table
+            WHERE due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY);
+        `
+       
+
+      
+
+  db.query(total_open_query, (err, totalOpenCountResult) => {
+    if(err){
+        response.status(500).json("Cannot Fetch Open Count");
+    console.log("191", err)
+    return
+    }
+
+    db.query(priority_query, (err2, priorityDistributionResult) => {
+        if(err2) {
+            response.status(500).json("Cannot Fetch Priority distribution");
+        console.log("193", err2);
+            return 
+        } 
+        db.query(due_soon_query, (err3, dueSoonCountResult) => {
+            if(err3){
+                response.status(500).json("Cannot Get Due Soon Count");
+            console.log("197", err3);
+            return 
+            } 
+
+            response.status(200).json({
+                totalOpenCount: totalOpenCountResult[0].totalOpen,
+                priorityDistribution: priorityDistributionResult,
+                dueSoonCount : dueSoonCountResult  
+            })
+            console.log("202", totalOpenCountResult, priorityDistributionResult, dueSoonCountResult);
+        })
+    })
+  })
 });
