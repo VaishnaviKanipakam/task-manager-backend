@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const app = express();
 const mysql = require("mysql2");
@@ -6,24 +7,31 @@ const cors = require("cors");
 app.use(express.json());
 app.use(cors());
 
-let db = null;
+let db; 
 const initializeDbAndServer = async () => {
   try {
-    db = mysql.createConnection({
-      host: "localhost",
-      user: "vaishu",
-      password: "Bharu@96",
-      database: "task_manager_backend",
-      insecureAuth: true,
+    db = mysql.createPool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      port: Number(process.env.DB_PORT || 3306),
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
     });
-    const port = 3004;
+     const port = process.env.DB_PORT || 3004;
     app.listen(port, () => {
       console.log(`app listening at ${port}...`);
     });
-    db.connect(function (err) {
-      if (err) throw err;
-      console.log("Conected!");
-    });
+    db.getConnection((err, connection) => {
+  if (err) {
+    console.error("Database connection failed:", err.message);
+  } else {
+    console.log("✅ Database connected successfully!");
+    connection.release();
+  }
+}); 
   } catch (e) {
     console.log(`DB Error: ${e.message}`);
     process.exit(1);
@@ -165,47 +173,42 @@ app.get("/get_insights", (request, response) => {
             tasks_table
         WHERE status = "open" ;`;
 
-    
-        const priority_query = `
+  const priority_query = `
              SELECT priority, COUNT(*) as priorityDistribution
             FROM  tasks_table
             GROUP BY priority
             ORDER BY priorityDistribution ASC;
         `;
 
-        const due_soon_query = `
+  const due_soon_query = `
             SELECT COUNT(*) AS dueSoonCount 
             FROM tasks_table
             WHERE due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY);
-        `
-       
-
-      
+        `;
 
   db.query(total_open_query, (err, totalOpenCountResult) => {
-    if(err){
-        response.status(500).json("Cannot Fetch Open Count");
-    return
+    if (err) {
+      response.status(500).json("Cannot Fetch Open Count");
+      return;
     }
 
     db.query(priority_query, (err2, priorityDistributionResult) => {
-        if(err2) {
-            response.status(500).json("Cannot Fetch Priority distribution");
-            return 
-        } 
-        db.query(due_soon_query, (err3, dueSoonCountResult) => {
-            if(err3){
-                response.status(500).json("Cannot Get Due Soon Count");
-            return 
-            } 
+      if (err2) {
+        response.status(500).json("Cannot Fetch Priority distribution");
+        return;
+      }
+      db.query(due_soon_query, (err3, dueSoonCountResult) => {
+        if (err3) {
+          response.status(500).json("Cannot Get Due Soon Count");
+          return;
+        }
 
-            response.status(200).json({
-                totalOpenCount: totalOpenCountResult[0].totalOpen,
-                priorityDistribution: priorityDistributionResult,
-                dueSoonCount : dueSoonCountResult  
-            })
-        })
-    })
-  })
+        response.status(200).json({
+          totalOpenCount: totalOpenCountResult[0].totalOpen,
+          priorityDistribution: priorityDistributionResult,
+          dueSoonCount: dueSoonCountResult,
+        });
+      });
+    });
+  });
 });
- 
