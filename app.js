@@ -52,7 +52,6 @@ app.post("/tasks", (request, response) => {
   db.query(create_task_table, (err, result) => {
     if (err) {
       response.status(500).json("Cannot Create Table");
-      console.log("56", err);
       return;
     }
 
@@ -69,11 +68,9 @@ app.post("/tasks", (request, response) => {
       (err, result) => {
         if (err) {
           response.status(500).json("Cannot Add Task");
-          console.log("73", err);
           return;
         }
         response.status(200).json("Task Created Successfully");
-        console.log("77", result);
       }
     );
   });
@@ -188,20 +185,17 @@ app.get("/get_insights", (request, response) => {
   db.query(total_open_query, (err, totalOpenCountResult) => {
     if(err){
         response.status(500).json("Cannot Fetch Open Count");
-    console.log("191", err)
     return
     }
 
     db.query(priority_query, (err2, priorityDistributionResult) => {
         if(err2) {
             response.status(500).json("Cannot Fetch Priority distribution");
-        console.log("193", err2);
             return 
         } 
         db.query(due_soon_query, (err3, dueSoonCountResult) => {
             if(err3){
                 response.status(500).json("Cannot Get Due Soon Count");
-            console.log("197", err3);
             return 
             } 
 
@@ -210,8 +204,8 @@ app.get("/get_insights", (request, response) => {
                 priorityDistribution: priorityDistributionResult,
                 dueSoonCount : dueSoonCountResult  
             })
-            console.log("202", totalOpenCountResult, priorityDistributionResult, dueSoonCountResult);
         })
     })
   })
 });
+ 
