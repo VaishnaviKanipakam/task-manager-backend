@@ -7,6 +7,14 @@ const cors = require("cors");
 app.use(express.json());
 app.use(cors());
 
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "https://your-frontend-domain.com"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true,
+  })
+);
+
 let db; 
 const initializeDbAndServer = async () => {
   try {
