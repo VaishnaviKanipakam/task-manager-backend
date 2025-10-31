@@ -99,50 +99,36 @@ app.get("/get_tasks", (request, response) => {
 });
 
 // Edit Task API
-app.put("/tasks", (request, response) => {
-  const id = request.query.id;
+app.patch("/edit_tasks", (request, response) => {
+  const taskId = request.query.task_id;
   const editTaskDetails = request.body;
-  const { editTitle, editDescription, editStatus, editDueDate } =
-    editTaskDetails;
+  const { editPriority, editStatus} = editTaskDetails;
 
-  if (
-    editTitle !== "" &&
-    editDescription !== "" &&
-    editStatus !== "" &&
-    editDueDate !== ""
-  ) {
     const edit_task_query = `
-    UPDATE task_manager
+    UPDATE tasks_table 
     SET
-        title = "${editTitle}",
-        description = "${editDescription}",
-        status = "${editStatus}",
-        due_date = "${editDueDate}",
+        priority = ?,
+        status = ?,
         updated_at = CURRENT_TIMESTAMP
     WHERE 
-        task_id = ${id};
-
-    `;
-    db.query(edit_task_query, (err, resut) => {
+        task_id = ?;`;
+    db.query(edit_task_query,[editPriority, editStatus, taskId], (err, resut) => {
       if (err) {
         response.status(500).json("Cannot Update Task");
         return;
       }
       response.status(200).json("Task Updated SuccessFully");
     });
-  } else {
-    response.status(500).json("Fill All The Fields");
-  }
 });
 
 // Delete Task API
 app.delete("/tasks", (request, response) => {
-  const id = request.query.id;
+  const taskId = request.query.task_id;
   const delete_task_query = `
         DELETE FROM
-            task_manager
+            tasks_table 
         WHERE 
-             task_id = ${id};
+             task_id = ${taskId};
     `;
 
   db.query(delete_task_query, (err, result) => {
